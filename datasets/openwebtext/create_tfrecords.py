@@ -1,3 +1,4 @@
+import argparse
 import glob
 import os
 import time
@@ -9,15 +10,6 @@ import tensorflow as tf
 from tqdm import tqdm
 
 import encoder
-
-base_dir = "/home/connor/2/newspaper" # Path to where your .txt files are located
-files_per = 175000 # 175000 ~ 200-300MB
-name = "openwebtext-newspaper" # Name of output files will be name_i.tfrecords where i is the number of the file
-output_dir = "/home/connor/out"
-log_dir = "logs"
-files = glob.glob(os.path.join(base_dir, "**/*.txt"))
-processes = 64 # Number of encoding processes to run
-encoder_path = "gs://openwebtext/stuff/encoder" # Path to encoder files
 
 def _int64_feature(value):
     """Returns an int64_list from a bool / enum / int / uint."""
@@ -33,15 +25,6 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         out.append(l[i:i + n])
     return out
-
-if not os.path.exists(log_dir):
-    os.mkdir(log_dir)
-
-enc = encoder.get_encoder(encoder_path)
-
-file_chunks = chunks(files, files_per)
-
-print("Got {} files, divided into {} chunks.".format(str(len(files)), str(len(file_chunks))))
 
 def create_file(args):
     i, chunk = args
@@ -77,12 +60,43 @@ def create_file(args):
 
     return good_files
 
-start = time.time()
-pool = Pool(processes=processes)
-good = 0
-for g in tqdm(pool.imap(create_file, enumerate(file_chunks)), total=len(file_chunks)):
-    good += g
+if __name__=="__main__":
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--base_dir",help="Path to where your .txt files are located",type=str)
+    parser.add_argument("--files_per",help="Number of files per tf record",default=175000,type=int)
+    parser.add_argument("--name",help="Output file name prefix {name}_i.tfrecords where i is the"
+                                "index of file",default="openwebtext-newspaper",type=str)
+    
+    parser.add_argument("--output_dir",help="Output directory",default="out",type=str)
+    parser.add_argument("--log_dir",help="Log directory",default="logs",type=str)
+    parser.add_argument("--processes",help="Number of encoding processes to run",default=64,type=int)
+    parser.add_argument("--encoder_path",help="Path to encoder files",default="encoder",type=str)
+    
+    args = parser.parse_args()
+    
+    name = args.name # Name of output files will be name_i.tfrecords where i is the number of the file
+    output_dir = args.output_dir
+    log_dir = args.log_dir
+    files = glob.glob(os.path.join(args.base_dir, "**/*.txt"))
 
-end = time.time()
+    if not os.path.exists(log_dir):
+        os.mkdir(log_dir)
 
-print("Done! In {:.2f}s, {} / {} good files.".format(end-start, str(good), str(len(files))))
+    enc = encoder.get_encoder(args.encoder_path)
+
+    file_chunks = chunks(files, args.files_per)
+
+    print("Got {} files, divided into {} chunks.".format(str(len(files)), str(len(file_chunks))))
+
+
+
+    start = time.time()
+    pool = Pool(processes=args.processes)
+    good = 0
+    for g in tqdm(pool.imap(create_file, enumerate(file_chunks)), total=len(file_chunks)):
+        good += g
+
+    end = time.time()
+
+    print("Done! In {:.2f}s, {} / {} good files.".format(end-start, str(good), str(len(files))))
