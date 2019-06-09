@@ -5,7 +5,7 @@ import tensorflow as tf
 # Expects .tfrecords files as produced by the script in datasets in a google storage bucket
 
 # Standard openwebtext
-def openwebtext(params, eval=False, batch=True):
+def openwebtext(params, eval=False, batch=True, stitch=42):
     if not eval:
         numbers = [0, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, # 32, (32 is empty)
                 33, 35, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 59, 63, 64,
@@ -18,7 +18,7 @@ def openwebtext(params, eval=False, batch=True):
             numbers = [1, 2, 11, 12, 16, 34, 36, 58, 60, 61, 62, 67, 83]
             files = [os.path.join(params["data_path"], "openwebtext-newspaper_{}.tfrecords".format(str(i))) for i in numbers]
 
-    return bpe_text(params["batch_size"], files, amount=params["n_ctx"], iterations=params["iterations"], stitch=42, batch=batch)
+    return bpe_text(params["batch_size"], files, amount=params["n_ctx"], iterations=params["iterations"], stitch=stitch, batch=batch)
 
 # Only samples that are at least 512 tokens long
 def openwebtext_long(params, eval=False, batch=True):
